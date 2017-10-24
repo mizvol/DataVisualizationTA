@@ -27,7 +27,7 @@ function createChart(data) {
   let charts = [];
   let maxDataPoint = 0;
   let minDataPoint = 100; // the init value just have to be big enough to be less than the highest temperature
-  
+
   // Get countries 
   for (let prop in data[0]) {
     if (data[0].hasOwnProperty(prop)) {
@@ -42,7 +42,7 @@ function createChart(data) {
   let endYear = data[data.length - 1].Year;
   let chartHeight = height * (1 / countriesCount);
 
- // Get max and min temperature bounds for Y-scale. 
+  // Get max and min temperature bounds for Y-scale. 
   data.map(d => {
     for (let prop in d) {
       if (d.hasOwnProperty(prop) && prop != 'Year') {
@@ -59,7 +59,7 @@ function createChart(data) {
     }
 
     /* Convert "Year" column to Date format to benefit 
-    from built-in D3 mechanisms for handling dates. */ 
+    from built-in D3 mechanisms for handling dates. */
     d.Year = new Date(d.Year, 0, 1);
   });
 
@@ -79,8 +79,7 @@ function createChart(data) {
 
   }
 
-  /* Let's create the context brush that will 
-      let us zoom and pan the chart */
+  // Create a context for a brush
   var contextXScale = d3.scaleTime()
     .range([0, contextWidth])
     .domain(charts[0].xScale.domain());
@@ -98,7 +97,10 @@ function createChart(data) {
     .curve(d3.curveLinear);
 
   var brush = d3.brushX()
-    .extent([[contextXScale.range()[0], 0],[contextXScale.range()[1], contextHeight]])
+    .extent([
+      [contextXScale.range()[0], 0],
+      [contextXScale.range()[1], contextHeight]
+    ])
     .on("brush", onBrush);
 
   let context = svg.append("g")
@@ -124,7 +126,6 @@ function createChart(data) {
 
   // Brush handler. Get time-range from a brush and pass it to the charts. 
   function onBrush() {
-    /* this will return a date range to pass into the chart object */
     var b = d3.event.selection === null ? contextXScale.domain() : d3.event.selection.map(contextXScale.invert);
     for (var i = 0; i < countriesCount; i++) {
       charts[i].showOnly(b);
@@ -132,103 +133,92 @@ function createChart(data) {
   }
 }
 
-class Chart{
-  constructor (options) {
-  this.chartData = options.data;
-  this.width = options.width;
-  this.height = options.height;
-  this.maxDataPoint = options.maxDataPoint;
-  this.minDataPoint = options.minDataPoint;
-  this.svg = options.svg;
-  this.id = options.id;
-  this.name = options.name;
-  this.margin = options.margin;
-  this.showBottomAxis = options.showBottomAxis;
+class Chart {
+  constructor(options) {
+    this.chartData = options.data;
+    this.width = options.width;
+    this.height = options.height;
+    this.maxDataPoint = options.maxDataPoint;
+    this.minDataPoint = options.minDataPoint;
+    this.svg = options.svg;
+    this.id = options.id;
+    this.name = options.name;
+    this.margin = options.margin;
+    this.showBottomAxis = options.showBottomAxis;
 
-  let localName = this.name;
+    let localName = this.name;
 
-  /* XScale is time based */
-  this.xScale = d3.scaleTime()
-    .range([0, this.width])
-    .domain(d3.extent(this.chartData.map(function(d) {
-      return d.Year;
-    })));
+    // Associate xScale with time 
+    this.xScale = d3.scaleTime()
+      .range([0, this.width])
+      .domain(d3.extent(this.chartData.map(function(d) {
+        return d.Year;
+      })));
 
-  /* YScale is linear based on the maxData Point we found earlier */
-  this.yScale = d3.scaleLinear()
-    .range([this.height, 0])
-    .domain([this.minDataPoint, this.maxDataPoint]);
-  let xS = this.xScale;
-  let yS = this.yScale;
+    // Bound yScale using minDataPoint and maxDataPoint  
+    this.yScale = d3.scaleLinear()
+      .range([this.height, 0])
+      .domain([this.minDataPoint, this.maxDataPoint]);
+    let xS = this.xScale;
+    let yS = this.yScale;
 
-  /* 
-    This is what creates the chart.
-    There are a number of interpolation options. 
-    'basis' smooths it the most, however, when working with a lot of data, this will slow it down 
-  */
-  this.area = d3.area()
-    .x(function(d) {
-      return xS(d.Year);
-    })
-    .y0(this.height)
-    .y1(function(d) {
-      return yS(d[localName]);
-    })
-    .curve(d3.curveLinear);
-  /*
-    This isn't required - it simply creates a mask. If this wasn't here,
-    when we zoom/panned, we'd see the chart go off to the left under the y-axis 
-  */
-  this.svg.append("defs").append("clipPath")
-    .attr("id", "clip-" + this.id)
-    .append("rect")
-    .attr("width", this.width)
-    .attr("height", this.height);
-  /*
-    Assign it a class so we can assign a fill color
-    And position it on the page
-  */
-  this.chartContainer = svg.append("g")
-    .attr('class', this.name.toLowerCase())
-    .attr("transform", "translate(" + this.margin.left + "," + (this.margin.top + (this.height * this.id) + (10 * this.id)) + ")");
+    /*   
+        Create the chart.  
+        Here we use 'curveLinear' interpolation.  
+        Play with the other ones: 'curveBasis', 'curveCardinal', 'curveStepBefore'.  
+        */
+    this.area = d3.area()
+      .x(function(d) {
+        return xS(d.Year);
+      })
+      .y0(this.height)
+      .y1(function(d) {
+        return yS(d[localName]);
+      })
+      .curve(d3.curveLinear);
 
-  this.chartContainer.append("path")
-    .data([this.chartData])
-    .attr("class", "chart")
-    .attr("clip-path", "url(#clip-" + this.id + ")")
-    .attr("d", this.area);
+    // Add the chart to the HTML page 
+    this.chartContainer = svg.append("g")
+      .attr('class', this.name.toLowerCase())
+      .attr("transform", "translate(" + this.margin.left + "," + (this.margin.top + (this.height * this.id) + (10 * this.id)) + ")");
 
-  this.xAxisTop = d3.axisBottom(this.xScale);
-  this.xAxisBottom = d3.axisTop(this.xScale);
-  /* We only want a top axis if it's the first country */
-  if (this.id == 0) {
+    this.chartContainer.append("path")
+      .data([this.chartData])
+      .attr("class", "chart")
+      .attr("clip-path", "url(#clip-" + this.id + ")")
+      .attr("d", this.area);
+
+    this.xAxisTop = d3.axisBottom(this.xScale);
+    this.xAxisBottom = d3.axisTop(this.xScale);
+    // show only the top axis
+    if (this.id == 0) {
+      this.chartContainer.append("g")
+        .attr("class", "x axis top")
+        .attr("transform", "translate(0,0)")
+        .call(this.xAxisTop);
+    }
+
+    // show only the bottom axis 
+    if (this.showBottomAxis) {
+      this.chartContainer.append("g")
+        .attr("class", "x axis bottom")
+        .attr("transform", "translate(0," + this.height + ")")
+        .call(this.xAxisBottom);
+    }
+
+    this.yAxis = d3.axisLeft(this.yScale).ticks(5);
+
     this.chartContainer.append("g")
-      .attr("class", "x axis top")
-      .attr("transform", "translate(0,0)")
-      .call(this.xAxisTop);
+      .attr("class", "y axis")
+      .attr("transform", "translate(-15,0)")
+      .call(this.yAxis);
+
+    this.chartContainer.append("text")
+      .attr("class", "country-title")
+      .attr("transform", "translate(15,40)")
+      .text(this.name);
+
   }
-
-   // show only the bottom axis 
-  if (this.showBottomAxis) {
-    this.chartContainer.append("g")
-      .attr("class", "x axis bottom")
-      .attr("transform", "translate(0," + this.height + ")")
-      .call(this.xAxisBottom);
-  }
-
-  this.yAxis = d3.axisLeft(this.yScale).ticks(5);
-
-  this.chartContainer.append("g")
-    .attr("class", "y axis")
-    .attr("transform", "translate(-15,0)")
-    .call(this.yAxis);
-
-  this.chartContainer.append("text")
-    .attr("class", "country-title")
-    .attr("transform", "translate(15,40)")
-    .text(this.name);
-
-}
 }
 
 Chart.prototype.showOnly = function(b) {
