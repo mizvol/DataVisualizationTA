@@ -1,0 +1,32 @@
+canvas,
+svg {
+  position: absolute;
+}
+
+.histogram {
+  isolation: isolate;
+}
+
+.histogram-area {
+  mix-blend-mode: screen;
+}
+
+.histogram-area.histogram-r {
+  fill: #f00;
+  opacity: 0.3;
+}
+
+.histogram-area.histogram-g {
+  fill: #0f0;
+  opacity: 0.3;
+}
+
+.histogram-area.histogram-b {
+  fill: #00f;
+  opacity: 0.3;
+}
+
+.histogram-line {
+  fill: none;
+  shape-rendering: crispEdges;
+}
